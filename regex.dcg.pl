@@ -1022,7 +1022,7 @@ isCategory(_Opts,'Cn') --> ['C'],['n'].  /* not assigned  */
  * = [^\p{IsX}]).
  */
 /* [36] IsBlock ::= 'Is' [a-zA-Z0-9#x2D]+ */
-isBlock(Opts,RB) --> is-prefix, blockName(Opts,Blist),
+isBlock(Opts,RB) --> is_prefix, blockName(Opts,Blist),
   {
      atom_chars(B,Blist),
      grammar_option(Opts,blocks(BlockOption)),
@@ -1030,7 +1030,7 @@ isBlock(Opts,RB) --> is-prefix, blockName(Opts,Blist),
      block_recognition(B,opts(BlockOption,XGH),RB)
   }.
 
-is-prefix  --> ['I'],['s'].
+is_prefix  --> ['I'],['s'].
 blockName(Opts,[H|T])  --> blockNameChar(Opts,H), blockName(Opts,T).
 blockName(Opts,[H])  --> blockNameChar(Opts,H).
 blockNameChar(_Opts,Ch) --> [Ch],
