@@ -1,7 +1,9 @@
 :- module(regex,
 	  [ re_compile/3,		% +Text, -Regex, +Options
 	    re_match//1,		% +Regex//
-	    re_match//2			% +Regex, -Registers//
+	    re_match//2,		% +Regex, -Registers//
+	    regex//1,			% +Regex//
+	    regex//2			% +Regex, -Registers//
 	  ]).
 :- use_module('regex.dcg').
 :- use_module(g_opts).
@@ -49,6 +51,11 @@ re_compile(Text, Regex, Options) :-
 	to_chars(Text, Chars),
 	phrase(regExp(Grammar, Regex), Chars).
 
+
+		 /*******************************
+		 *	     MATCHING		*
+		 *******************************/
+
 %%	re_match(+Regex)// is semidet.
 %%	re_match(+Regex, Regs)// is semidet.
 %
@@ -81,10 +88,11 @@ re_match(or(Branch, Branch), R, RT) -->
 re_match(seq(Pieces), R, RT) -->
 	pieces(Pieces, R, RT).
 re_match(char(Ch), R, R) -->
-	[Ch].
+	[C],
+	{ char_code(Ch, C) }.
 re_match(charClass(Class), R, R) -->
 	char_class(Class).
-re_match(regex(Re), R, RT) -->	% This is a (...) expression
+re_match(regexp(Re), R, RT) -->	% This is a (...) expression
 	(   { R == (-) }
 	->  re_match(Re)
 	;   { R = [H|RT] },
@@ -241,6 +249,41 @@ kw(not(KW)) -->
 	->  { fail }
 	;   [_]
 	).
+
+
+		 /*******************************
+		 *	    DCG EMBEDDING	*
+		 *******************************/
+
+%%	regex(+Pattern)// is semidet.
+%%	regex(+Pattern, ?Registers)// is semidet.
+%
+%	Match the given regular expression at the current location.
+%	This goal is normally expanded into a call to re_match//2
+%	at compile-time.
+
+regex(Pattern) -->
+	{ re_compile(Pattern, Regex, []) },
+	re_match(Regex).
+regex(Pattern, Registers) -->
+	{ re_compile(Pattern, Regex, []) },
+	re_match(Regex, Registers).
+
+user:goal_expansion(regex(Pattern, In, Out),
+		    re_match(Regex, In, Out)) :-
+	atom(Pattern),
+	prolog_load_context(module, M),
+	predicate_property(M:re_match(_,_,_),
+			   imported_from(regex)),
+	re_compile(Pattern, Regex, []).
+user:goal_expansion(regex(Pattern, Registers, In, Out),
+		    re_match(Regex, Registers, In, Out)) :-
+	atom(Pattern),
+	prolog_load_context(module, M),
+	predicate_property(M:re_match(_,_,_,_),
+			   imported_from(regex)),
+	re_compile(Pattern, Regex, []).
+
 
 
 		 /*******************************
