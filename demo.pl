@@ -1,9 +1,6 @@
 :- use_module(regex).
 :- use_module(library(http/dcg_basics)).
 
-t1 -->
-	regex('a:\\s*(\\d+)').
-
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 1 ?- time(forall(between(1, 100000, _), t2(C, "Content-length: 42", []))).
 % 4,600,039 inferences, 1.000 CPU in 1.026 seconds (98% CPU, 4600039 Lips)

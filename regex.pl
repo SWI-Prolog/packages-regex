@@ -217,16 +217,53 @@ sce(C) --> [C].
 %
 %	Matches a UNICODE description.
 %
-%	@tbd	Efficiency
-%	@tbd	What categories are defined and how do these relate to
-%		the Unicode general categories.
+%	@tbd	Efficiency.  Move this into code_type/2?
 
 category(block(_BlockName, Start, End)) --> !, % Is<BlockName>
 	[C],
 	{ between(Start, End, C) }.
-category(Cat) -->
+category(Category) -->
 	[C],
-	{ unicode_property(C, general_category(Cat)) }.
+	{ unicode_property(C, general_category(Cat)),
+	  match_category(Category, Cat)
+	}.
+
+match_category('L', 'L').
+match_category('L', 'Lu').
+match_category('L', 'Ll').
+match_category('L', 'Lt').
+match_category('L', 'Lm').
+match_category('L', 'Lo').
+match_category('M', 'M').
+match_category('M', 'Mn').
+match_category('M', 'Mc').
+match_category('M', 'Me').
+match_category('N', 'N').
+match_category('N', 'Nd').
+match_category('N', 'Nl').
+match_category('N', 'No').
+match_category('P', 'P').
+match_category('P', 'Pc').
+match_category('P', 'Pd').
+match_category('P', 'Ps').
+match_category('P', 'Pe').
+match_category('P', 'Pi').
+match_category('P', 'Pf').
+match_category('P', 'Po').
+match_category('Z', 'Z').
+match_category('Z', 'Zs').
+match_category('Z', 'Zl').
+match_category('Z', 'Zp').
+match_category('S', 'S').
+match_category('S', 'Sm').
+match_category('S', 'Sc').
+match_category('S', 'Sk').
+match_category('S', 'So').
+match_category('C', 'C').
+match_category('C', 'Cc').
+match_category('C', 'Cf').
+match_category('C', 'Co').
+match_category('C', 'Cn').
 
 
 kw(anycharacter_but_nl) -->
