@@ -1,13 +1,13 @@
 /* DCG for XML Schema 1.0 regular expressions.
  * Parse the expression and return a structure.
- * 
+ *
  * Revisions:
  * 2008-05-23 : CMSMcQ : add options to ignore ad hoc / extragrammatical rules
  *			 in each grammar (to support checking statements like
  *                       "Expression E is not legal against the grammar, but
  *                       is allowed by ..." or "E is ambiguous against the
  *			 grammar taken by itself, but ..."
- * 2008-03-28 : CMSMcQ : finish working through grammar adding options 
+ * 2008-03-28 : CMSMcQ : finish working through grammar adding options
  *                       and cleaning.
  * 2008-03-27 : CMSMcQ : add options argument, to allow this grammar to parse
  *                       according to various versions of the XSD regex grammar.
@@ -24,10 +24,10 @@
  *                     * Add flags to positive character groups (and their
  *                       descendants) to show whether a literal caret is
  *                       allowed to appear.
- *                     * make single-character escapes return sce(Char), 
+ *                     * make single-character escapes return sce(Char),
  *                       not just Char.
  *                     ? I believe this is now parsing and producing good
- *                       ASTs for all test cases. 
+ *                       ASTs for all test cases.
  * 2004-02-05 : CMSMcQ : cosmetic changes to comments, to make
  *                       it easier to see dead code.
  *                     * Remove most uses of char_type(Char,_Type)
@@ -70,6 +70,10 @@
  *
  */
 
+:- module(regex_dcg,
+	  [ regExp//2			% +Options, -ParseTree
+	  ]).
+
 /* Import grammar_option predicate from g_opts module, for checking option values.
  * The internals of the options need not concern us here.
  */
@@ -80,10 +84,10 @@
 /* "A regular expression is composed from zero or more branches,
  * separated by | characters."
  *
- * [1] regExp ::= branch ( '|' branch )* 
+ * [1] regExp ::= branch ( '|' branch )*
  */
 /* (Actually, the grammar requires at least one branch; the prose is wrong,
- * misguided perhaps by the fact that the branch can be empty. 
+ * misguided perhaps by the fact that the branch can be empty.
  */
 
 /* regExp(+Opts,-Expr) takes two arguments:
@@ -101,10 +105,10 @@ regExp(Opts,Expr) --> branch(Opts,Left), altbranches(Opts,Left,Expr).
  * allow the top-level AST to be constructed appropriately.  I assume
  * I learned the idiom from O'Keefe, Craft of Prolog, but I can't find the
  * passage now.  Possibly I got it elsewhere.
- * 
+ *
  * altbranches(+Opts,+Left,-Expr) takes three arguments:
  *   Opts is the grammatical options, as always.
- *   Left is the left-hand operand of the or-bar, produced by 
+ *   Left is the left-hand operand of the or-bar, produced by
  *        branch(Opts,Left) in the rule for regExp, and passed
  *        in as a bound argument to altbranches.
  *   Expr is the final AST for the expression in which this
@@ -119,7 +123,7 @@ altbranches(_Opts,Left,Left) --> [].
 /* If any Prolog novices are reading this, you'll need to know that _Opts
  * is a way of signaling that the first argument to altbranches is not
  * actually used here, so we don't care what it's bound to.  The leading
- * _ serves both as a reassurance to the reader (no, not a typo) and a 
+ * _ serves both as a reassurance to the reader (no, not a typo) and a
  * signal to the interpreter (don't issue a warning message about unused
  * variables).
  */
@@ -129,13 +133,13 @@ altbranches(_Opts,Left,Left) --> [].
  * next branch together, and pass it as an argument to altbranches.
  */
 
-altbranches(Opts,Left,Expr) --> 
+altbranches(Opts,Left,Expr) -->
 	['|'], branch(Opts,Right), altbranches(Opts,or(Left,Right),Expr).
 
-/* N.B. the rule given makes '|' left-associative.  
- * We could make it right-associative by writing  
- * 
- *   altbranches(Opts,Left,or(Left,Right)) --> 
+/* N.B. the rule given makes '|' left-associative.
+ * We could make it right-associative by writing
+ *
+ *   altbranches(Opts,Left,or(Left,Right)) -->
  *        ['|'], branch(Opts,Middle), altbranches(Opts,Middle, Right).
  *
  */
@@ -151,20 +155,20 @@ altbranches(Opts,Left,Expr) -->
 
 branch(_Opts,seq([])) --> [].
 branch(Opts,seq([P|T])) --> piece(Opts,P), branch(Opts,seq(T)).
- 
+
 
 /* [Definition:] A piece is an atom, possibly followed by a
  * quantifier.
  *
- * [3] piece ::= atom quantifier?  
+ * [3] piece ::= atom quantifier?
  */
 
 piece(Opts,QofA) --> re_atom(Opts,A), quantifier(Opts,count(Min,Max)),
                      { QofA =.. [count, Min, Max, A] }.
 
-/* In the AST, the quantifier is not optional:  we wrap ALL atoms in 
+/* In the AST, the quantifier is not optional:  we wrap ALL atoms in
  * a count structure.  The optionality of quantifier is expressed
- * by allowing the non-terminal to match the empty string (which 
+ * by allowing the non-terminal to match the empty string (which
  * returns count(1,1)).
  */
 
@@ -172,7 +176,7 @@ piece(Opts,QofA) --> re_atom(Opts,A), quantifier(Opts,count(Min,Max)),
 /* [Definition:] A quantifier is one of ?, *, +, {n,m} or {n,}, which
  * have the meanings defined in the table above.
  *
- * [4] quantifier ::= [?*+] | ( '{' quantity '}' ) 
+ * [4] quantifier ::= [?*+] | ( '{' quantity '}' )
  */
 
 quantifier(_Opts,count(0,1)) --> ['?'].
@@ -188,16 +192,16 @@ quantifier(_Opts,count(1,1)) --> [].
 
 /* The literal translation of this into DCG would be something like this:
  *
- *   quantity(Q) --> quantRange(Q). 
- *   quantity(count(Min,unbounded)) --> quantMin(Min). 
- *   quantity(count(N,N)) --> quantExact(N). 
- *   quantRange(count(Min,Max)) --> quantExact(Min), comma, quantExact(Max). 
- *   comma --> [',']. 
- *   quantMin(N) --> quantExact(N), comma. 
+ *   quantity(Q) --> quantRange(Q).
+ *   quantity(count(Min,unbounded)) --> quantMin(Min).
+ *   quantity(count(N,N)) --> quantExact(N).
+ *   quantRange(count(Min,Max)) --> quantExact(Min), comma, quantExact(Max).
+ *   comma --> [','].
+ *   quantMin(N) --> quantExact(N), comma.
  *
  */
 /* Less lookahead is required (and less rework, which is useful when
- * debugging the grammar in a trace utility) if we reformulate it as 
+ * debugging the grammar in a trace utility) if we reformulate it as
  * shown below.  Quantifiers of the form {n,m} catch the first rule
  * for maxspec, {n,} catches the second rule (which binds Max
  * to 'unbounded'), and {n} catches the third maxspec rule (which
@@ -211,7 +215,7 @@ maxspec(_Opts,_Min,unbounded) --> [','].
 maxspec(_Opts,Minmax,Minmax) --> [].
 
 /* quantExact requires at least one decimal digit */
-quantExact(Opts,N) --> digit(Opts,D), digits(Opts,Lchar), 
+quantExact(Opts,N) --> digit(Opts,D), digits(Opts,Lchar),
                        { number_chars(N,[D|Lchar]) }.
 
 /* digits == zero or more decimal digits == [0-9]* */
@@ -222,8 +226,8 @@ digit(_Opts,D) --> [D], { char_type(D,digit) }.
 
 /* [Definition:] An atom is either a normal character, a character
  * class, or a parenthesized regular expression.
- * 
- * [9] atom ::= Char | charClass | ( '(' regExp ')' ) 
+ *
+ * [9] atom ::= Char | charClass | ( '(' regExp ')' )
  */
 /* The term 'atom' has other meanings in Prolog, so we rename the
  * non-terminal re_atom (regular-expression atom).
@@ -233,25 +237,25 @@ re_atom(Opts,charClass(Cl)) --> charClass(Opts,Cl).
 re_atom(Opts,regexp(RE)) --> ['('], regExp(Opts,RE), [')'].
 
 /* ? why did I bother to wrap this in regexp()?  Excess of caution,
- * perhaps.  It would be simpler all around just to write 
+ * perhaps.  It would be simpler all around just to write
  *
  *   re_atom(RE) --> lpar, regExp(RE), rpar.
  *
- * But wrapping it stays a bit closer to the syntax, which 
- * is useful for my present purposes. 
+ * But wrapping it stays a bit closer to the syntax, which
+ * is useful for my present purposes.
  */
 
 
-/* [Definition:] A metacharacter is either ., \, ?, *, +, {, } (, ), |, 
+/* [Definition:] A metacharacter is either ., \, ?, *, +, {, } (, ), |,
  * [, or ]. These characters have special meanings in regular
  * expressions, but can be escaped to form atoms that denote the sets
  * of strings containing only themselves, i.e., an escaped
  * metacharacter behaves like a normal character.
  */
 
-/* N.B. XSD 1.0 omitted | from this list, as did drafts D4 and D5 
- * of XSD 1.1.  D6 and later include it.  The grammar rules have 
- * always had it, so it's unlikely that any parsers treat | as a 
+/* N.B. XSD 1.0 omitted | from this list, as did drafts D4 and D5
+ * of XSD 1.1.  D6 and later include it.  The grammar rules have
+ * always had it, so it's unlikely that any parsers treat | as a
  * normal character, but there's a grammar option for it, just in
  * case.
  */
@@ -263,11 +267,11 @@ re_atom(Opts,regexp(RE)) --> ['('], regExp(Opts,RE), [')'].
  *
  * 1.0 1E, PER, 2E, D4, and D5 have:
  *
- *     [10] Char ::= [^.\?*+()|#x5B#x5D] 
+ *     [10] Char ::= [^.\?*+()|#x5B#x5D]
  *
  * Later versions (D6, LC, D8, W) have:
  *
- *     [10] Char ::= [^.\?*+{}()|#x5B#x5D] 
+ *     [10] Char ::= [^.\?*+{}()|#x5B#x5D]
  */
 
 /* For this grammar, characters are represented as Prolog atoms.
@@ -275,8 +279,8 @@ re_atom(Opts,regexp(RE)) --> ['('], regExp(Opts,RE), [')'].
  * but I wrote the first version of the grammar a long time ago.)
  */
 
-char(Opts,Atom) --> [Atom], 
-  { 
+char(Opts,Atom) --> [Atom],
+  {
     is_singlechar(Atom),   % if this fails, infrastructure has failed
 
     not(member(Atom, ['.', '\\', '?', '*', '+', '(', ')', '[', ']'])),
@@ -304,23 +308,23 @@ char(Opts,Atom) --> [Atom],
  * c in C(R).
  *
  * 1.0 1E has:
- * 
+ *
  *     [11] charClass ::= charClassEsc | charClassExpr
- * 
+ *
  * All other forms of the grammar have:
  *
  * [11] charClass ::= charClassEsc | charClassExpr | WildcardEsc
  *
- * We therefore guard the third rule for charClass by checking 
+ * We therefore guard the third rule for charClass by checking
  * the option wcesc (the value 'cc' means:  the non-terminal
  * WildcardEsc is defined and is a character class).
  */
 
 charClass(Opts,Cl) --> charClassEsc(Opts,Cl).
 charClass(Opts,Cl) --> charClassExpr(Opts,Cl).
-charClass(Opts,Cl) --> { grammar_option(Opts,wcesc(cc)) }, 
+charClass(Opts,Cl) --> { grammar_option(Opts,wcesc(cc)) },
                        wildcardEsc(Opts,Cl).
- 
+
 /* A character class is either a character class escape or a character
  * class expression or a wildcard escape.
  */
@@ -329,7 +333,7 @@ charClass(Opts,Cl) --> { grammar_option(Opts,wcesc(cc)) },
  * is a valid character class expression, identifying the set of
  * characters C([G]) = C(G).
  *
- * [12] charClassExpr ::= '[' charGroup ']' 
+ * [12] charClassExpr ::= '[' charGroup ']'
  */
 charClassExpr(Opts,Cl) --> ['['], charGroup(Opts,Cl), [']'].
 
@@ -339,25 +343,25 @@ charClassExpr(Opts,Cl) --> ['['], charGroup(Opts,Cl), [']'].
  *
  * Grammars 1E through D8 have:
  *
- *     [13] charGroup ::= posCharGroup | negCharGroup | charClassSub 
- * 
+ *     [13] charGroup ::= posCharGroup | negCharGroup | charClassSub
+ *
  * W has:
- * 
+ *
  *     [76] charGroup ::= (posCharGroup | negCharGroup) ('-' charClassExpr)?
  *
  * Grammar option ccsub(X) controls this variation.
  */
-charGroup(Opts,any(Cl)) --> 
+charGroup(Opts,any(Cl)) -->
 	{ grammar_option(Opts,ccsub(defined)) },
         posCharGroup(Opts,nolc,Cl).
-charGroup(Opts,Cl) --> 
+charGroup(Opts,Cl) -->
 	{ grammar_option(Opts,ccsub(defined)) },
 	negCharGroup(Opts,Cl).
-charGroup(Opts,Cl) --> 
+charGroup(Opts,Cl) -->
 	{ grammar_option(Opts,ccsub(defined)) },
 	charClassSub(Opts,Cl).
 
-charGroup(Opts,AST) --> 
+charGroup(Opts,AST) -->
 	{ grammar_option(Opts,ccsub(undefined)) },
 	minuend(Opts,Minuend),
 	opt_subtrahend(Opts,Minuend,AST).
@@ -377,18 +381,18 @@ ccsub_minus --> ['-'], lookahead('[').
  *
  * Most forms of the grammar have:
  *
- *     [14] posCharGroup ::= ( charRange | charClassEsc )+ 
- * 
+ *     [14] posCharGroup ::= ( charRange | charClassEsc )+
+ *
  * W has:
- * 
+ *
  *     [77] posCharGroup ::= (charGroupPart)+
  *
  * The grammar option is cgpart(defined|undefined).
  */
-/* N.B. "The ^ character is only valid at the beginning of a positive 
+/* N.B. "The ^ character is only valid at the beginning of a positive
  * character group if it is part of a negative character group".
  *
- * So we pass a parameter on the call to posCharGroup, to act as a flag: 
+ * So we pass a parameter on the call to posCharGroup, to act as a flag:
  *   - 'nolc' means no leading caret is allowed.
  *   - 'oklc' means leading caret is allowed.
  * We could check this in the AST, instead of here.  But for most
@@ -399,9 +403,9 @@ ccsub_minus --> ['-'], lookahead('[').
  */
 
 /* posCharGroup with cgpart(undefined):
- * This is a little awkward, but in order to stay close to the 
+ * This is a little awkward, but in order to stay close to the
  * source grammar we will treat charRange and charClassEsc
- * separately. 
+ * separately.
  */
 posCharGroup(Opts,CaretFlag,[Range|More]) -->
 	{ grammar_option(Opts,cgpart(undefined)) },
@@ -409,7 +413,7 @@ posCharGroup(Opts,CaretFlag,[Range|More]) -->
 	crcce(Opts,More),
 	{ grammar_option(Opts,xghacks(XGH)),
 	  grammar_option(Opts,charrange(CR)),
-	  hyphen_ok([Range|More],CR,XGH) 
+	  hyphen_ok([Range|More],CR,XGH)
 	  }.
 posCharGroup(Opts,_CaretFlag,[CCE|More]) -->
 	{ grammar_option(Opts,cgpart(undefined)) },
@@ -417,10 +421,10 @@ posCharGroup(Opts,_CaretFlag,[CCE|More]) -->
 	crcce(Opts,More),
 	{ grammar_option(Opts,xghacks(XGH)),
 	  grammar_option(Opts,charrange(CR)),
-	  hyphen_ok([CCE|More],CR,XGH) 
+	  hyphen_ok([CCE|More],CR,XGH)
 	}.
 
-/* posCharGroup with cgpart(defined) 
+/* posCharGroup with cgpart(defined)
  */
 posCharGroup(Opts,CaretFlag,[Part|Parts]) -->
 	{ grammar_option(Opts,cgpart(defined)) },
@@ -431,16 +435,16 @@ posCharGroup(Opts,CaretFlag,[Part|Parts]) -->
 	  hyphen_ok([Part|Parts],CR,XGH) }.
 
 
-/* crcce == (charRange | charClassEsc)* 
+/* crcce == (charRange | charClassEsc)*
  * (Only for cgpart(undefined).
  * Once we are here, ^ is ok as a character range, so we
  * pass the argument 'oklc' to charRange.
  */
 crcce(_Opts,[]) --> [].
-crcce(Opts,[Range|More]) --> 
+crcce(Opts,[Range|More]) -->
         charRange(Opts,oklc,Range),
 	crcce(Opts,More).
-crcce(Opts,[CCE|More]) --> 
+crcce(Opts,[CCE|More]) -->
         charClassEsc(Opts,CCE),
 	crcce(Opts,More).
 
@@ -448,44 +452,44 @@ crcce(Opts,[CCE|More]) -->
  * Only applies (only reachable) if cgpart(defined).
  */
 cgp_star(_Opts,[]) --> [].
-cgp_star(Opts,[Part|Parts]) --> 
+cgp_star(Opts,[Part|Parts]) -->
         charGroupPart(Opts,oklc,Part),
 	cgp_star(Opts,Parts).
 
 
 /* old: keep for a moment
-posCharGroup(Opts,CaretFlag,[CGI]) --> 
+posCharGroup(Opts,CaretFlag,[CGI]) -->
 	charGroupItem(Opts,CaretFlag,CGI).
-posCharGroup(Opts,CaretFlag,[CGI|CGIs]) --> 
-	charGroupItem(Opts,CaretFlag,CGI), 
+posCharGroup(Opts,CaretFlag,[CGI|CGIs]) -->
+	charGroupItem(Opts,CaretFlag,CGI),
 	posCharGroup(Opts,oklc,CGIs).
 charGroupItem(Opts,CaretFlag,CGI) --> charRange(Opts,CaretFlag,CGI).
 charGroupItem(Opts,_CaretFlag,CGI) --> charClassEsc(Opts,CGI).
 */
- 
+
 
 /* [Definition:] A negative character group is a positive character
  * group preceded by the ^ character. For all positive character
  * groups P, ^P is a valid negative character group, and C(^P)
  * contains all XML characters that are not in C(P).
  *
- * [15] negCharGroup ::= '^' posCharGroup 
+ * [15] negCharGroup ::= '^' posCharGroup
  */
 negCharGroup(Opts,none(CG)) --> ['^'], posCharGroup(Opts,oklc,CG).
 
- 
+
 /* [Definition:] A character class subtraction is a character class
  * expression subtracted from a positive character group or negative
  * character group, using the - character.
  *
  * [16] charClassSub ::= ( posCharGroup | negCharGroup ) '-'
- *                       charClassExpr 
+ *                       charClassExpr
  */
 /* Only reachable if ccsub(defined) */
-charClassSub(Opts,diff(Base,Subtrahend)) --> 
+charClassSub(Opts,diff(Base,Subtrahend)) -->
         { grammar_option(Opts,ccsub(defined)) },
-	baseGroup(Opts,Base), 
-	['-'], 
+	baseGroup(Opts,Base),
+	['-'],
 	charClassExpr(Opts,Subtrahend).
 baseGroup(Opts,any(Cl)) --> posCharGroup(Opts,nolc,Cl).
 baseGroup(Opts,Cl) --> negCharGroup(Opts,Cl).
@@ -495,9 +499,9 @@ baseGroup(Opts,Cl) --> negCharGroup(Opts,Cl).
  * single unescaped character (SingleCharNoEsc), a single escaped
  * character (SingleCharEsc), or a character range (charRange).
  *
- * 
+ *
  * [79] charGroupPart ::= singleChar | charRange
- * [80] singleChar ::= SingleCharEsc | SingleCharNoEsc 
+ * [80] singleChar ::= SingleCharEsc | SingleCharNoEsc
  *
  * If a charGroupPart starts with a singleChar and this is immediately
  * followed by a hyphen, and if the hyphen is part of the character
@@ -517,14 +521,14 @@ baseGroup(Opts,Cl) --> negCharGroup(Opts,Cl).
  */
 /* Only reachable if cgpart(defined) */
 
-charGroupPart(Opts,CaretFlag,Part) --> 
+charGroupPart(Opts,CaretFlag,Part) -->
         { grammar_option(Opts,cgpart(defined)) },
 	singleChar(Opts,CaretFlag,Part),
 
 	/* succeed in recognizing a charGroupPart if:
          * lookahead is '-['
          * or lookahead is not '-'
-         * or we aren't doing extra-grammatical hacks. 
+         * or we aren't doing extra-grammatical hacks.
          */
 	( lookahead('-','[')
 	| ( lookahead(C), { C \=  '-' } )
@@ -532,7 +536,7 @@ charGroupPart(Opts,CaretFlag,Part) -->
 	).
 	/* We can rely on C being there, because even if the
            charGroup ends with the singleChar, there needs to
-           be a following ']' 
+           be a following ']'
         */
         /* If we couldn't count on at least one more character
            being there, we'd need to say as a third option
@@ -542,18 +546,18 @@ charGroupPart(Opts,CaretFlag,Part) -->
                   ( lookahead('-','[')
                   | lookahead(C), { !, C \= '-' }
                   | []
-                  )       
-          
-           The cut in the second branch says, in effect, "if 
+                  )
+
+           The cut in the second branch says, in effect, "if
            a one-character lookahead succeeded, commit to it; the third
-           (empty-string) option is not a choice open to you now."            
+           (empty-string) option is not a choice open to you now."
          */
 
-charGroupPart(Opts,CaretFlag,Part) --> 
+charGroupPart(Opts,CaretFlag,Part) -->
 	{ grammar_option(Opts,cgpart(defined)) },
 	charRange(Opts,CaretFlag,Part).
 
-charGroupPart(Opts,_CaretFlag,Part) --> 
+charGroupPart(Opts,_CaretFlag,Part) -->
 	{ grammar_option(Opts,cgpart(defined)),
 	  grammar_option(Opts,cgp_has_cce(yes))
 	},
@@ -569,53 +573,53 @@ singleChar(Opts,CaretFlag,C) --> singleCharNoEsc(Opts,CaretFlag,C).
  *
  * Several variants.  charrange('1E') (1.0 1E) has:
  *
- *     [17] charRange ::= seRange | XmlCharRef | XmlCharIncDash  
+ *     [17] charRange ::= seRange | XmlCharRef | XmlCharIncDash
  *
  * charrange('PER') (1.0 2E PER) has:
- * 
- *     [17] charRange ::= seRange | XmlChar  
+ *
+ *     [17] charRange ::= seRange | XmlChar
  *
  * charrange('2E') (2E, D4-D8) has:
  *
  *     [17] charRange ::= seRange | XmlCharIncDash
  *
  * charRange('W') (draft proposal for bug 1889) has:
- * 
+ *
  *     [82] charRange ::= singleChar '-' singleChar
- */  
+ */
 /* And remember we have the CaretFlag hack to worry about. */
 
-charRange(Opts,CaretFlag,R) --> 
+charRange(Opts,CaretFlag,R) -->
 	{ grammar_option(Opts,charrange(CR)),
 	  member(CR,['1E','PER','2E'])
         },
 	seRange(Opts,CaretFlag,R).
-charRange(Opts,_CaretFlag,R) --> 
+charRange(Opts,_CaretFlag,R) -->
 	{ grammar_option(Opts,charrange('1E')) },
 	xmlCharRef(Opts,R).
-charRange(Opts,CaretFlag,R) --> 
+charRange(Opts,CaretFlag,R) -->
 	{ grammar_option(Opts,charrange(CR)),
 	  member(CR,['1E','2E'])
         },
 	xmlCharIncDash(Opts,CaretFlag,R),
 	/* checking prose restrictions now:
-           [, ], and \ are not valid character ranges 
+           [, ], and \ are not valid character ranges
          */
 	{ ( grammar_option(Opts,xghacks(yes))
-	  ->  not(member(R,[ '\\', '[', ']' ])) 
+	  ->  not(member(R,[ '\\', '[', ']' ]))
 	  ;   true
-	  ) }	  
+	  ) }
         .
-charRange(Opts,CaretFlag,R) --> 
+charRange(Opts,CaretFlag,R) -->
 	{ grammar_option(Opts,charrange('PER')) },
 	xmlChar(Opts,CaretFlag,R),
 	/* checking prose restrictions now:
-           [, ], and \ are not valid character ranges 
+           [, ], and \ are not valid character ranges
          */
 	{ ( grammar_option(Opts,xghacks(yes))
-	  ->  not(member(R,[ '\\', '[', ']' ])) 
+	  ->  not(member(R,[ '\\', '[', ']' ]))
 	  ;   true
-	  ) } 
+	  ) }
 	.
 
 /* The charRange rule for W has a prose constraint that says
@@ -623,7 +627,7 @@ charRange(Opts,CaretFlag,R) -->
  * (If the hyphens are escaped, the AST will be 'sce(-)', not
  * '-').
  */
-charRange(Opts,CaretFlag,range(Min,Max)) --> 
+charRange(Opts,CaretFlag,range(Min,Max)) -->
 	{ grammar_option(Opts,charrange('W')) },
 	singleChar(Opts,CaretFlag,Min),
 	['-'],
@@ -638,10 +642,10 @@ charRange(Opts,CaretFlag,range(Min,Max)) -->
 /* [18] seRange ::= charOrEsc '-' charOrEsc */
 /* not reachable if we have grammar option charrange('W'). */
 
-seRange(Opts,CaretFlag,range(Min,Max)) --> 
+seRange(Opts,CaretFlag,range(Min,Max)) -->
         { grammar_option(Opts,serange(defined)) },
-	charOrEsc(Opts,CaretFlag,Min), 
-	['-'], 
+	charOrEsc(Opts,CaretFlag,Min),
+	['-'],
 	charOrEsc(Opts,oklc,Max),
 	/* check prose constraints, see s-e discussion below */
 	{ ( grammar_option(Opts,xghacks(yes))
@@ -657,22 +661,22 @@ seRange(Opts,CaretFlag,range(Min,Max)) -->
 	  )
 	}.
 
-/* [19] XmlCharRef ::= ( '&#' [0-9]+ ';' ) 
- *                   | (' &#x' [0-9a-fA-F]+ ';' ) 
+/* [19] XmlCharRef ::= ( '&#' [0-9]+ ';' )
+ *                   | (' &#x' [0-9a-fA-F]+ ';' )
  */
 /* Only reachable in 1E, the grammar option guard is belt and suspenders */
-xmlCharRef(Opts,charref(dec,N)) --> 
+xmlCharRef(Opts,charref(dec,N)) -->
         { grammar_option(Opts,xmlcharref(defined)) },
-	['&', '#'], 
-	digit(Opts,D), 
-	digits(Opts,Ds), 
+	['&', '#'],
+	digit(Opts,D),
+	digits(Opts,Ds),
 	[';'],
 	{ atom_chars(N,[D|Ds]) }.
-xmlCharRef(Opts,charref(hex,N)) --> 
+xmlCharRef(Opts,charref(hex,N)) -->
         { grammar_option(Opts,xmlcharref(defined)) },
-	['&', '#', 'x'], 
-	hexdigit(Opts,D), 
-	hexdigits(Opts,Ds), 
+	['&', '#', 'x'],
+	hexdigit(Opts,D),
+	hexdigits(Opts,Ds),
 	[';'],
 	{ atom_chars(N,[D|Ds]) }.
 
@@ -685,19 +689,19 @@ hexdigit(_Opts,D) --> [D], { char_type(D,xdigit(_)) }.
 /* [20] charOrEsc ::= XmlChar | SingleCharEsc */
 /* not reachable if we have grammar option charrange('W'). */
 
-charOrEsc(Opts,CaretFlag,C) --> 
+charOrEsc(Opts,CaretFlag,C) -->
         { grammar_option(Opts,xmlchar(defined)) },
 	xmlChar(Opts,CaretFlag,C).
-charOrEsc(Opts,_CaretFlag,C) --> 
+charOrEsc(Opts,_CaretFlag,C) -->
         { grammar_option(Opts,xmlchar(defined)) },
 	singleCharEsc(Opts,C).
 
-/* [21] XmlChar ::= [^\#x2D#x5B#x5D] 
+/* [21] XmlChar ::= [^\#x2D#x5B#x5D]
  * i.e. any character but "\", "-",  "[", or "]".
  * If the carethack is on and the CaretFlag argument is 'nolc',
  * then also exclude '^'.
  */
-/* There may be a more clever way of checking that positive 
+/* There may be a more clever way of checking that positive
  * character groups contain carets at the beginning only
  * if the positive group is in a negative group; passing the
  * CaretFlag parameter down from charGroup through posCharGroup,
@@ -705,14 +709,14 @@ charOrEsc(Opts,_CaretFlag,C) -->
  * seems surprisingly cumbersome.  But I understand it, and
  * it works.
  */
-xmlChar(Opts,oklc,Atom) --> 
+xmlChar(Opts,oklc,Atom) -->
         { grammar_option(Opts,xmlchar(defined)) },
-	[Atom], 
+	[Atom],
 	{ is_singlechar(Atom),
 	not(member(Atom, ['\\','-','[',']'] )) }.
-xmlChar(Opts,nolc,Atom) --> 
+xmlChar(Opts,nolc,Atom) -->
         { grammar_option(Opts,xmlchar(defined)) },
-	[Atom], 
+	[Atom],
 	{ is_singlechar(Atom),
 	  not(member(Atom, ['\\','-','[',']'] )),
 	  ( grammar_option(Opts,xghacks(yes)),
@@ -724,23 +728,23 @@ xmlChar(Opts,nolc,Atom) -->
 
 
 /* XmlCharIncDash is present in 1E, 2E, D4-D8, but not in PER or W. */
-/* [22] XmlCharIncDash ::= [^\#x5B#x5D] 
+/* [22] XmlCharIncDash ::= [^\#x5B#x5D]
  * i.e. any but \ [ ]
  */
 
 xmlCharIncDash(Opts,CaretFlag,Atom) -->
         { grammar_option(Opts,xmlcharincdash(defined)) },
-	[Atom], 
+	[Atom],
 	{ is_singlechar(Atom),
 	  not(member(Atom, ['\\','[',']'] )),
-	  ( CaretFlag = nolc, 
+	  ( CaretFlag = nolc,
 	    grammar_option(Opts,carethack(yes)),
 	    grammar_option(Opts,xghacks(yes))
 	  -> Atom \= '^'
 	  ;  true
 	  )
 	}.
- 	
+
 
 /* 1E through D8 impose some form or other of the following constraints
  * in prose; W omits all of them.
@@ -751,7 +755,7 @@ xmlCharIncDash(Opts,CaretFlag,Atom) -->
  *
  *   "The [, ], - and \ characters are not valid character ranges;"
  *
- * Imposed in this program by a guard on charRange (not checked for 
+ * Imposed in this program by a guard on charRange (not checked for
  * grammar version W).
  *
  *   "The ^ character is only valid at the beginning of a positive
@@ -775,25 +779,25 @@ xmlCharIncDash(Opts,CaretFlag,Atom) -->
 /* All versions up to W say:
  * "s-e is a valid character range iff:
  *
- *   "s is a single character escape, or an XML character; 
- *   "s is not \ 
- *   "If s is the first character in a character class expression, 
+ *   "s is a single character escape, or an XML character;
+ *   "s is not \
+ *   "If s is the first character in a character class expression,
  *      [??? surely you mean in a positive character group?!]
- *      then s is not ^ 
- *   "e is a single character escape, or an XML character; 
- *   "e is not \ or [; and 
+ *      then s is not ^
+ *   "e is a single character escape, or an XML character;
+ *   "e is not \ or [; and
  *   "The code point of e is greater than or equal to the code point of
  *      s."
  */
 /* Of these, 1 and 4 are enforced by the grammar,
- * 3 by the carethack flag, and 2, 5, and 6 are enforced 
+ * 3 by the carethack flag, and 2, 5, and 6 are enforced
  * by a guard in the rule for serange.
  */
 
 /* W adds:
- * 
- * [87] SingleCharNoEsc ::= [^\#x5B#x5D] 
- * 
+ *
+ * [87] SingleCharNoEsc ::= [^\#x5B#x5D]
+ *
  * A single unescaped character (SingleCharNoEsc) is any character
  * except '[' or ']'. There are special rules, described earlier, that
  * constraint the use of the characters '-' and '^' in order to
@@ -804,7 +808,7 @@ xmlCharIncDash(Opts,CaretFlag,Atom) -->
 
 singleCharNoEsc(Opts,CaretFlag,Atom) -->
         { grammar_option(Opts,scharnoesc(defined)) },
-	[Atom], 
+	[Atom],
 	{ is_singlechar(Atom),
 	  not(member(Atom, ['\\', '[',']'])),
 	  ( CaretFlag = nolc
@@ -828,7 +832,7 @@ singleCharNoEsc(Opts,CaretFlag,Atom) -->
  * block escapes).
  *
  * [23] charClassEsc ::= ( SingleCharEsc | MultiCharEsc | catEsc |
- *                         complEsc ) 
+ *                         complEsc )
  */
 
 charClassEsc(Opts,Cl) --> singleCharEsc(Opts,Cl).
@@ -844,7 +848,7 @@ charClassEsc(Opts,Cl) --> complEsc(Opts,Cl).
 /* [24] SingleCharEsc ::= '\' [nrt\|.?*+(){}#x2D#x5B#x5D#x5E] */
 /*                             nrt\|.?*+(){} -   [   ]   ^    */
 singleCharEsc(Opts,sce(SEC)) --> backslash, singleEscChar(Opts,SEC).
-singleEscChar(_Opts,Atom) --> [Atom], 
+singleEscChar(_Opts,Atom) --> [Atom],
  { is_singlechar(Atom),
    member(Atom,['n','r','t','\\','|','.','?','*','+',
                 '(',')','{','}','-','[',']','^']) }.
@@ -853,23 +857,23 @@ backslash --> ['\\'].
 /* The valid single character escapes are: Identifying the set of
  * characters C(R) containing:
  *
- *   \n the newline character (#xA) 
- *   \r the return character (#xD) 
- *   \t the tab character (#x9) 
- *   \\ \ 
- *   \| | 
- *   \. . 
- *   \- - 
- *   \^ ^ 
- *   \? ? 
- *   \* * 
- *   \+ + 
- *   \{ { 
- *   \} } 
- *   \( ( 
- *   \) ) 
- *   \[ [ 
- *   \] ] 
+ *   \n the newline character (#xA)
+ *   \r the return character (#xD)
+ *   \t the tab character (#x9)
+ *   \\ \
+ *   \| |
+ *   \. .
+ *   \- -
+ *   \^ ^
+ *   \? ?
+ *   \* *
+ *   \+ +
+ *   \{ {
+ *   \} }
+ *   \( (
+ *   \) )
+ *   \[ [
+ *   \] ]
  */
 /* [Definition:] [Unicode Database] specifies a number of possible
  * values for the "General Category" property and provides mappings
@@ -903,51 +907,51 @@ charProp(Opts,P) --> isBlock(Opts,P).
 /* The following table specifies the recognized values of the "General
  * Category" property.
  *
- *   Category Property Meaning 
- *   Letters     L  All Letters 
- *               Lu uppercase 
- *               Ll lowercase 
- *               Lt titlecase 
- *               Lm modifier 
- *               Lo other 
+ *   Category Property Meaning
+ *   Letters     L  All Letters
+ *               Lu uppercase
+ *               Ll lowercase
+ *               Lt titlecase
+ *               Lm modifier
+ *               Lo other
  *
- *   Marks       M  All Marks 
- *               Mn nonspacing 
- *               Mc spacing combining 
- *               Me enclosing 
+ *   Marks       M  All Marks
+ *               Mn nonspacing
+ *               Mc spacing combining
+ *               Me enclosing
  *
- *   Numbers     N  All Numbers 
- *               Nd decimal digit 
- *               Nl letter 
- *               No other 
+ *   Numbers     N  All Numbers
+ *               Nd decimal digit
+ *               Nl letter
+ *               No other
  *
- *   Punctuation P  All Punctuation 
- *               Pc connector 
- *               Pd dash 
- *               Ps open 
- *               Pe close 
- *               Pi initial quote (may behave like Ps or Pe 
- *                  depending on usage) 
- *               Pf final quote (may behave like Ps or Pe 
- *                  depending on usage) 
- *               Po other 
+ *   Punctuation P  All Punctuation
+ *               Pc connector
+ *               Pd dash
+ *               Ps open
+ *               Pe close
+ *               Pi initial quote (may behave like Ps or Pe
+ *                  depending on usage)
+ *               Pf final quote (may behave like Ps or Pe
+ *                  depending on usage)
+ *               Po other
  *
- *   Separators  Z  All Separators 
- *               Zs space 
- *               Zl line 
- *               Zp paragraph 
+ *   Separators  Z  All Separators
+ *               Zs space
+ *               Zl line
+ *               Zp paragraph
  *
- *   Symbols     S All Symbols 
- *               Sm math 
- *               Sc currency 
- *               Sk modifier 
- *               So other 
+ *   Symbols     S All Symbols
+ *               Sm math
+ *               Sc currency
+ *               Sk modifier
+ *               So other
  *
- *   Other       C  All Others 
- *               Cc control 
- *               Cf format 
- *               Co private use 
- *               Cn not assigned 
+ *   Other       C  All Others
+ *               Cc control
+ *               Cf format
+ *               Co private use
+ *               Cn not assigned
  */
 
 /* [28] IsCategory ::= Letters | Marks | Numbers | Punctuation |
@@ -1019,7 +1023,7 @@ isCategory(_Opts,'Cn') --> ['C'],['n'].  /* not assigned  */
  */
 /* [36] IsBlock ::= 'Is' [a-zA-Z0-9#x2D]+ */
 isBlock(Opts,RB) --> is-prefix, blockName(Opts,Blist),
-  { 
+  {
      atom_chars(B,Blist),
      grammar_option(Opts,blocks(BlockOption)),
      grammar_option(Opts,xghacks(XGH)),
@@ -1042,24 +1046,24 @@ blockNameChar(_Opts,'-') --> ['-'].
  *
  * 1E has:
  *
- * [37] MultiCharEsc ::= '.' | ('\' [sSiIcCdDwW])  
+ * [37] MultiCharEsc ::= '.' | ('\' [sSiIcCdDwW])
  *
  * All later versions have:
  *
- * [37] MultiCharEsc ::= '\' [sSiIcCdDwW]  
+ * [37] MultiCharEsc ::= '\' [sSiIcCdDwW]
  */
 
 /* MSM: note that we'll need further work on all of these.
  * Either we compile them down to fundamentals, as suggested by the
  * rule multiCharEscCode(not(or(cr,lf))) --> ['.'], or we
  * make them keywords, as suggested by the rule
- * multiCharEscCode(nameStart) --> ['i']. 
+ * multiCharEscCode(nameStart) --> ['i'].
  *
  * Consistency would be useful here.
  */
 
 multiCharEsc(Opts,Cl) --> backslash, multiCharEscCode(Opts,Cl).
-multiCharEsc(Opts,kw(anycharacter_but_nl)) --> 
+multiCharEsc(Opts,kw(anycharacter_but_nl)) -->
 	{ grammar_option(Opts,wcesc(nocc)) },
 	['.'].
 
@@ -1079,7 +1083,7 @@ multiCharEsc(Opts,kw(anycharacter_but_nl)) -->
 multiCharEscCode(_Opts,kw(whitespace)) --> ['s'].
 multiCharEscCode(_Opts,kw(not(whitespace))) --> ['S'].
 
-multiCharEscCode(_Opts,kw(nameStart)) --> ['i']. 
+multiCharEscCode(_Opts,kw(nameStart)) --> ['i'].
 multiCharEscCode(_Opts,kw(not(nameStart))) --> ['I'].
 multiCharEscCode(_Opts,kw(namechar)) --> ['c'].
 multiCharEscCode(_Opts,kw(not(namechar))) --> ['C'].
@@ -1090,26 +1094,26 @@ multiCharEscCode(_Opts,kw(not(nonpuncsepother))) --> ['W'].
 
 
 /* ? [37a] WildcardEsc ::= '.' ?  */
-wildcardEsc(Opts,kw(anycharacter_but_nl)) --> 
+wildcardEsc(Opts,kw(anycharacter_but_nl)) -->
 	{ grammar_option(Opts,wcesc(cc)) },
 	['.'].
 
-/*   Character sequence Equivalent character class 
+/*   Character sequence Equivalent character class
  *
- *   .  [^\n\r] 
- *   \s [#x20\t\n\r] 
- *   \S [^\s] 
- *   \i the set of initial name characters, 
- *      those matched by Letter | '_' | ':' 
- *   \I [^\i] 
- *   \c the set of name characters, those matched by NameChar 
- *   \C [^\c] 
- *   \d \p{Nd} 
- *   \D [^\d] 
- *   \w [#x0000-#x10FFFF]-[\p{P}\p{Z}\p{C}] 
- *      (all characters except the set of "punctuation", 
- *      "separator" and "other" characters)  
- *   \W [^\w] 
+ *   .  [^\n\r]
+ *   \s [#x20\t\n\r]
+ *   \S [^\s]
+ *   \i the set of initial name characters,
+ *      those matched by Letter | '_' | ':'
+ *   \I [^\i]
+ *   \c the set of name characters, those matched by NameChar
+ *   \C [^\c]
+ *   \d \p{Nd}
+ *   \D [^\d]
+ *   \w [#x0000-#x10FFFF]-[\p{P}\p{Z}\p{C}]
+ *      (all characters except the set of "punctuation",
+ *      "separator" and "other" characters)
+ *   \W [^\w]
  */
 /* Note: The regular expression language defined here does not attempt
  * to provide a general solution to "regular expressions" over UCS
