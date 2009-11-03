@@ -213,6 +213,9 @@ sce(C) --> [C].
 %	@tbd	What categories are defined and how do these relate to
 %		the Unicode general categories.
 
+category(block(_BlockName, Start, End)) --> !, % Is<BlockName>
+	[C],
+	{ between(Start, End, C) }.
 category(Cat) -->
 	[C],
 	{ unicode_property(C, general_category(Cat)) }.
