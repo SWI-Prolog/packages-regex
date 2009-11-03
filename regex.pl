@@ -82,8 +82,8 @@ re_match(seq(Pieces), R, RT) -->
 	pieces(Pieces, R, RT).
 re_match(char(Ch), R, R) -->
 	[Ch].
-re_match(charclass(Class), R, R) -->
-	charclass(Class).
+re_match(charClass(Class), R, R) -->
+	char_class(Class).
 re_match(regex(Re), R, RT) -->	% This is a (...) expression
 	(   { R == (-) }
 	->  re_match(Re)
@@ -157,22 +157,22 @@ unbounded(Atom, R, RT) -->
 unbounded(_, R, R) -->
 	[].
 
-charclass(any(Any)) -->
+char_class(any(Any)) -->
 	any(Any).
-charclass(none(Any)) -->
+char_class(none(Any)) -->
 	none(Any).
-charclass(diff(Pos, Neg)) -->
+char_class(diff(Pos, Neg)) -->
 	diff(Pos, Neg).
-charclass(category(Cat)) -->
+char_class(category(Cat)) -->
 	category(Cat).
-charclass(notcategory(Cat)) -->
+char_class(notcategory(Cat)) -->
 	(   category(Cat)
 	->  {fail}
 	;   [_]
 	).
-charclass(sce(Char)) -->		% \n, \t, ...
+char_class(sce(Char)) -->		% \n, \t, ...
 	sce(Char).
-charclass(kw(KW)) -->
+char_class(kw(KW)) -->
 	kw(KW).
 
 any([H|_]) -->
@@ -195,9 +195,9 @@ chargroup(range(Low, High)) -->
 	  }.
 
 diff(Pos, Neg) -->
-	(   charclass(Neg)
+	(   char_class(Neg)
 	->  { fail }
-	;   charclass(Pos)
+	;   char_class(Pos)
 	).
 
 sce(n) --> !, "\n".
