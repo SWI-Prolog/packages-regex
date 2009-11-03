@@ -26,6 +26,9 @@ This  module  implements  two  interfaces  to    suit   these  needs:  a
 conventional regex interface to compile a  regex   and  match it on some
 text and a goal-expanded non-terminal  that   allows  for  including the
 power of regular expressions directly in DCGs.
+
+@tbd	Optimizations
+@tbd	Specialize the general matcher for a given input.
 */
 
 		 /*******************************
