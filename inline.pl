@@ -19,6 +19,10 @@ used constructs into efficient code.
 @tbd	Can we turn this into a hot-spot compiler?
 		* S_VIRGIN --> S_COUNT, ...
 		* S_COUNT triggers compiler after N calls.
+@tbd	member/2, ! --> memberchk
+@tbd    A = ..., xyz(A)
+@tbd	Arithmetic expression optimization
+@tbd	Recursion
 */
 
 :- record
