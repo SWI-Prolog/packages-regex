@@ -110,43 +110,25 @@ clauses_to_control_structure(Bodies, Goal) :-
 
 %%	optimize_control(+ControlIn, -ControlOut, +State) is det.
 
-optimize_control(Var, Var, _) :-
+optimize_control(Goal0, Goal, State) :-
+	unfold_control(Goal0, Goal1, State),
+	simplify(Goal1, Goal).
+
+unfold_control(Var, Var, _) :-
 	var(Var), !.
-optimize_control((True,G0), G, State) :- % (A,B)
-	always_true(True), !,
-	optimize_control(G0, State, G).
-optimize_control((G0,True), G, State) :-
-	always_true(True), !,
-	optimize_control(G0, G, State).
-optimize_control((A0,B0), (A,B), State) :- !,
-	optimize_control(A0, A, State),
-	optimize_control(B0, B, State).
-optimize_control((True->T0;_), T, State) :-	% if->then;else
-	always_true(True), !,
-	optimize_control(T0, T, State).
-optimize_control((False->_;E0), E, State) :-
-	always_false(False), !,
-	optimize_control(E0, E, State).
-optimize_control((I0->T0;E0), (I->T;E), State) :- !,
-	optimize_control(I0, I, State),
-	optimize_control(T0, T, State),
-	optimize_control(E0, E, State).
-optimize_control((False;B0), B, State) :-	% (A;B)
-	always_false(False), !,
-	optimize_control(B0, B, State).
-optimize_control((B0;False), B, State) :-
-	always_false(False), !,
-	optimize_control(B0, B, State).
-optimize_control((A0;B0), Goal, State) :- !,
-	optimize_control(A0, A, State),
-	optimize_control(B0, B, State),
-	(   (A \== A0 ; B \== B0)
-	->  optimize_control((A;B), Goal, State)
-	;   Goal = (A;B)
-	).
-optimize_control(\+(G0), G, State) :- !,
-	optimize_control(G0, G, State).
-optimize_control(Goal, NewGoal, State) :-
+unfold_control((A0,B0), (A,B), State) :- !,
+	unfold_control(A0, A, State),
+	unfold_control(B0, B, State).
+unfold_control((I0->T0;E0), (I->T;E), State) :- !,
+	unfold_control(I0, I, State),
+	unfold_control(T0, T, State),
+	unfold_control(E0, E, State).
+unfold_control((A0;B0), (A;B), State) :- !,
+	unfold_control(A0, A, State),
+	unfold_control(B0, B, State).
+unfold_control(\+(G0), G, State) :- !,
+	unfold_control(G0, G, State).
+unfold_control(Goal, NewGoal, State) :-
 	unfold_max_depth(State, MaxDepth),
 	unfold_depth(State, D0),
 	D0 < MaxDepth,
@@ -154,7 +136,43 @@ optimize_control(Goal, NewGoal, State) :-
 	set_depth_of_unfold(D1, State, State1),
 	expand(Goal, NewGoal, State1),
 	NewGoal \== Goal, !.
-optimize_control(Control, Control, _).
+unfold_control(Control, Control, _).
+
+simplify(G0, G) :-
+	simplify_1(G0, G1),
+	G1 \== G0, !,
+	simplify(G1, G).
+simplify(G, G).
+
+simplify_1(Var, Var) :-
+	var(Var), !.
+simplify_1((True,G0), G) :-		% (A,B)
+	always_true(True), !,
+	simplify_1(G0, G).
+simplify_1((G0,True), G) :-
+	always_true(True), !,
+	simplify_1(G0, G).
+simplify_1((A0,B0), (A,B)) :- !,
+	simplify_1(A0, A),
+	simplify_1(B0, B).
+simplify_1((True->If0;_), If) :-
+	always_true(True), !,
+	simplify_1(If0, If).
+simplify_1((False->_;E0), E) :-
+	always_false(False), !,
+	simplify_1(E0, E).
+simplify_1((False;G0), G) :-		% (A;B)
+	always_false(False), !,
+	simplify_1(G0, G).
+simplify_1((G0;False), G) :-
+	always_false(False), !,
+	simplify_1(G0, G).
+simplify_1((A0;B0), (A;B)) :- !,
+	simplify_1(A0, A),
+	simplify_1(B0, B).
+simplify_1(\+(G0), \+(G)) :- !,
+	simplify_1(G0, G).
+simplify_1(G, G).
 
 always_true(Var) :-
 	var(Var), !, fail.
