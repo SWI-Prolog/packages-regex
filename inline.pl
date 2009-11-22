@@ -59,10 +59,16 @@ expand(Control, NewControl, State) :-
 	control(Control), !,
 	optimize_control(Control, NewControl, State).
 expand(Goal, NewGoal, State) :-
+	unfold_module(State, M),
+	'$define_predicate'(M:Goal),
+	(   predicate_property(M:Goal, imported_from(M2))
+	->  set_module_of_unfold(M2, State, State1)
+	;   State1 = State
+	),
 	catch(bagof_or_nil(Body, substitution(Goal, Body, State), Bodies),
 	      _, fail), !,
 	(   clauses_to_control_structure(Bodies, Goal1)
-	->  expand(Goal1, NewGoal, State)
+	->  expand(Goal1, NewGoal, State1)
 	;   NewGoal = Goal
 	).
 expand(Goal, Goal, _).
