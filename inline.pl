@@ -28,6 +28,9 @@ used constructs into efficient code.
 		  the clause(s).
 		- Otherwise, we cannot optimize
 	I.e. we must specialise maplist/N!
+@tbd	Avoid repetitive execution of the same code (must check it is
+	pure).
+@tbd	Avoid complementary tests.
 */
 
 :- record
@@ -222,40 +225,43 @@ split_on_cut(Body, cut(Before, After)) :-
 	comma_list(Body, List),
 	append(BL, [Cut|AL], List),
 	Cut == (!), !,
-	no_cut_in(BL),
-	no_cut_in(AL),
+	no_goal_in(!, BL),
+	no_goal_in(!, AL),
 	comma_list(Before, BL),
 	comma_list(After, AL).
 split_on_cut(Body, simple(Body)) :-
-	no_cut_in(Body).
+	no_goal_in(!, Body).
 
-no_cut_in(List) :-
+%%	no_goal_in(+Goal, +List) is semidet.
+
+no_goal_in(Goal, List) :-
 	\+ ( member(L, List),
-	     cut_in(L)
+	     goal_in(L, Goal)
 	   ).
 
-cut_in(Var) :-
+goal_in(Var, _) :-
 	var(Var), !,
 	fail.
-cut_in(!).
-cut_in((A,B)) :-
-	(   cut_in(A)
-	;   cut_in(B)
+goal_in(A, Goal) :-
+	subsumes_chk(Goal, A).
+goal_in((A,B), Goal) :-
+	(   goal_in(A, Goal)
+	;   goal_in(B, Goal)
 	).
-cut_in((A;B)) :-
-	(   cut_in(A)
-	;   cut_in(B)
+goal_in((A;B), Goal) :-
+	(   goal_in(A, Goal)
+	;   goal_in(B, Goal)
 	).
-cut_in((A->B)) :-
-	(   cut_in(A)
-	;   cut_in(B)
+goal_in((A->B), Goal) :-
+	(   goal_in(A, Goal)
+	;   goal_in(B, Goal)
 	).
-cut_in((A*->B)) :-
-	(   cut_in(A)
-	;   cut_in(B)
+goal_in((A*->B), Goal) :-
+	(   goal_in(A, Goal)
+	;   goal_in(B, Goal)
 	).
-cut_in(\+(A)) :-
-	cut_in(A).
+goal_in(\+(A), Goal) :-
+	goal_in(A, Goal).
 
 %%	control(@Term) is semidet.
 %
