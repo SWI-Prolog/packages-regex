@@ -3,6 +3,7 @@
 	  ]).
 :- use_module(library(lists)).
 :- use_module(library(apply)).
+:- use_module(library(record)).
 
 /** <module> Perform inline expansion of goals
 
@@ -18,39 +19,53 @@ used constructs into efficient code.
 @tbd	Can we turn this into a hot-spot compiler?
 		* S_VIRGIN --> S_COUNT, ...
 		* S_COUNT triggers compiler after N calls.
-@tbd	Carry context module around
 */
+
+:- record
+	unfold(module:atom,
+	       max_depth:integer=5,
+	       depth:integer=0,
+	       clauses:list=[]).
 
 %%	inline_expansion(+Goal, +Module, -NewGoal, -Clauses) is det.
 %
 %	NewGoal is an optimised version of   Goal  that depends, besides
 %	the original program, on the program defined by Clauses.
 
-inline_expansion(Goal, _, Goal, []) :-
+inline_expansion(Goal, Module, NewGoal, Clauses) :-
+	make_unfold([module(Module)], State),
+	expand(Goal, NewGoal, State),
+	unfold_clauses(State, List0),
+	reverse(List0, Clauses).
+
+expand(Goal, Goal, _) :-
 	var(Goal), !.
-inline_expansion(M:Goal0, _, Goal, Clauses) :-
+expand(M:Goal0, Goal, State0) :-
 	atom(M), !,
-	inline_expansion(Goal0, M, Goal, Clauses).
-inline_expansion(Call, _, Goal, []) :-
+	set_module_of_unfold(M, State0, State),
+	expand(Goal0, Goal, State).
+expand(Call, Goal, _) :-
 	expand_call_n(Call, Goal), !.
-inline_expansion(Goal, M, Goal, []) :-
+expand(Goal, Goal, State) :-
+	unfold_module(State, M),
 	predicate_property(M:Goal, foreign), !.
-inline_expansion(Goal, M, Goal, []) :-
+expand(Goal, Goal, State) :-
+	unfold_module(State, M),
 	predicate_property(M:Goal, dynamic), !.
-inline_expansion(Goal, M, Goal, []) :-
+expand(Goal, Goal, State) :-
+	unfold_module(State, M),
 	predicate_property(M:Goal, multifile), !.
-inline_expansion(Control, M, NewControl, []) :-
+expand(Control, NewControl, State) :-
 	control(Control), !,
-	optimize_control(Control, M, NewControl).
-inline_expansion(Goal, M, NewGoal, Clauses) :-
-	catch(bagof_or_nil(Body, substitution(Goal, M, Body), Bodies),
+	optimize_control(Control, NewControl, State).
+expand(Goal, NewGoal, State) :-
+	catch(bagof_or_nil(Body, substitution(Goal, Body, State), Bodies),
 	      _, fail), !,
 	(   clauses_to_control_structure(Bodies, Goal1)
-	->  inline_expansion(Goal1, M, NewGoal, Clauses)
-	;   NewGoal = Goal,
-	    Clauses = []
+	->  expand(Goal1, NewGoal, State)
+	;   NewGoal = Goal
 	).
-inline_expansion(Goal, _, Goal, []).
+expand(Goal, Goal, _).
 
 :- meta_predicate
 	bagof_or_nil(?, 0, -).
@@ -59,13 +74,14 @@ bagof_or_nil(Templ, Goal, List) :-
 	bagof(Templ, Goal, List), !.
 bagof_or_nil(_, _, []).
 
-%%	substitution(+Goal, +Module, -NewGoal) is nondet.
+%%	substitution(+Goal, -NewGoal, +State) is nondet.
 %
 %	According to some clause, Goal can   be  substituted by NewGoal.
 %	Note that this is different from   clause/2 because we must take
 %	care of the head-unification.
 
-substitution(Goal, M, NewGoal) :-
+substitution(Goal, NewGoal, State) :-
+	unfold_module(State, M),
 	copy_term(Goal, G2),
 	clause(M:G2, Body),
 	unifiable(Goal, G2, Unifier),
@@ -86,41 +102,41 @@ clauses_to_control_structure(Bodies, Goal) :-
 	maplist(split_on_cut, Bodies, SplitBodies),
 	splitted_to_goal(SplitBodies, Goal).
 
-%%	optimize_control(+ControlIn, +Module, -ControlOut) is det.
+%%	optimize_control(+ControlIn, -ControlOut, +State) is det.
 
-optimize_control(Var, _, Var) :-
+optimize_control(Var, Var, _) :-
 	var(Var), !.
-optimize_control((True,G0), M, G) :-	% (A,B)
+optimize_control((True,G0), G, State) :- % (A,B)
 	always_true(True), !,
-	optimize_control(G0, M, G).
-optimize_control((G0,True), M, G) :-
+	optimize_control(G0, State, G).
+optimize_control((G0,True), G, State) :-
 	always_true(True), !,
-	optimize_control(G0, M, G).
-optimize_control((A0,B0), M, (A,B)) :- !,
-	optimize_control(A0, M, A),
-	optimize_control(B0, M, B).
-optimize_control((True->T0;_), M, T) :-	% if->then;else
+	optimize_control(G0, G, State).
+optimize_control((A0,B0), (A,B), State) :- !,
+	optimize_control(A0, A, State),
+	optimize_control(B0, B, State).
+optimize_control((True->T0;_), T, State) :-	% if->then;else
 	always_true(True), !,
-	optimize_control(T0, M, T).
-optimize_control((False->_;E0), M, E) :-
+	optimize_control(T0, T, State).
+optimize_control((False->_;E0), E, State) :-
 	always_false(False), !,
-	optimize_control(E0, M, E).
-optimize_control((I0->T0;E0), M, (I->T;E)) :- !,
-	optimize_control(I0, M, I),
-	optimize_control(T0, M, T),
-	optimize_control(E0, M, E).
-optimize_control((False;B0), M, B) :-	% (A;B)
+	optimize_control(E0, E, State).
+optimize_control((I0->T0;E0), (I->T;E), State) :- !,
+	optimize_control(I0, I, State),
+	optimize_control(T0, T, State),
+	optimize_control(E0, E, State).
+optimize_control((False;B0), B, State) :-	% (A;B)
 	always_false(False), !,
-	optimize_control(B0, M, B).
-optimize_control((B0;False), M, B) :-
+	optimize_control(B0, B, State).
+optimize_control((B0;False), B, State) :-
 	always_false(False), !,
-	optimize_control(B0, M, B).
-optimize_control((A0;B0), M, (A;B)) :- !,
-	optimize_control(A0, M, A),
-	optimize_control(B0, M, B).
-optimize_control(\+(G0), M, G) :- !,
-	optimize_control(G0, M, G).
-optimize_control(Control, _, Control).
+	optimize_control(B0, B, State).
+optimize_control((A0;B0), (A;B), State) :- !,
+	optimize_control(A0, A, State),
+	optimize_control(B0, B, State).
+optimize_control(\+(G0), G, State) :- !,
+	optimize_control(G0, G, State).
+optimize_control(Control, Control, _).
 
 always_true(Var) :-
 	var(Var), !, fail.
