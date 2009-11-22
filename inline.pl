@@ -186,15 +186,23 @@ simplify_1(\+(G0), \+(G)) :- !,
 	simplify_1(G0, G).
 simplify_1(G, G).
 
+%%	always_true(+Goal)
+%
+%	True for things that are  always  true.   We  need  a  bit more,
+%	because some goals are always true, but bind variables. E.g., If
+%	?=(A,B), that (A=B->I;E) must map to A=B,I.
+
 always_true(Var) :-
 	var(Var), !, fail.
 always_true(true).
+always_true(A==B) :- ?=(A,B), A == B.
 
 always_false(Var) :-
 	var(Var), !, fail.
 always_false(fail).
 always_false(false).
-
+always_false(A==B) :- ?=(A,B), A \== B.
+always_false(A=B) :-  ?=(A,B), A \= B.
 
 %%	splitted_to_goal(+SplittedTerms, -Goal) is det.
 %
