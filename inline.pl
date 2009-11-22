@@ -65,7 +65,7 @@ splitted_to_goal([cut(B,A)], Goal) :- !,
 splitted_to_goal([cut(B,A)|T], (B -> A ; R)) :-
 	splitted_to_goal(T, R).
 splitted_to_goal([simple(A)], A) :- !.
-splitted_to_goal([simple(A),T], (A;B)) :-
+splitted_to_goal([simple(A)|T], (A;B)) :-
 	splitted_to_goal(T, B).
 
 
@@ -85,7 +85,7 @@ split_on_cut(Body, cut(Before, After)) :-
 	no_cut_in(AL),
 	comma_list(Before, BL),
 	comma_list(After, AL).
-split_on_cut(Body, Body) :-
+split_on_cut(Body, simple(Body)) :-
 	no_cut_in(Body).
 
 no_cut_in(List) :-
