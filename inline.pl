@@ -1,5 +1,5 @@
 :- module(inline,
-	  [ inline_expansion/3		% +Goal, -NewGoal, -Clauses
+	  [ inline_expansion/4		% +Goal, +Module, -NewGoal, -Clauses
 	  ]).
 :- use_module(library(lists)).
 :- use_module(library(apply)).
@@ -21,36 +21,116 @@ used constructs into efficient code.
 @tbd	Carry context module around
 */
 
-%%	inline_expansion(+Goal, -NewGoal, -Clauses) is det.
+%%	inline_expansion(+Goal, +Module, -NewGoal, -Clauses) is det.
 %
 %	NewGoal is an optimised version of   Goal  that depends, besides
 %	the original program, on the program defined by Clauses.
 
-inline_expansion(Goal, Goal, []) :-
+inline_expansion(Goal, _, Goal, []) :-
 	var(Goal), !.
-inline_expansion(Call, Goal, []) :-
+inline_expansion(M:Goal0, _, Goal, Clauses) :-
+	atom(M), !,
+	inline_expansion(Goal0, M, Goal, Clauses).
+inline_expansion(Call, _, Goal, []) :-
 	expand_call_n(Call, Goal), !.
-inline_expansion(Goal, Goal, []) :-
-	predicate_property(Goal, foreign), !.
-inline_expansion(Goal, Goal, []) :-
-	predicate_property(Goal, dynamic), !.
-inline_expansion(Goal, Goal, []) :-
-	predicate_property(Goal, multifile), !.
-inline_expansion(Control, NewControl, []) :-
+inline_expansion(Goal, M, Goal, []) :-
+	predicate_property(M:Goal, foreign), !.
+inline_expansion(Goal, M, Goal, []) :-
+	predicate_property(M:Goal, dynamic), !.
+inline_expansion(Goal, M, Goal, []) :-
+	predicate_property(M:Goal, multifile), !.
+inline_expansion(Control, M, NewControl, []) :-
 	control(Control), !,
-	optimize_control(Control, NewControl).
-inline_expansion(Goal, NewGoal, Clauses) :-
-	catch(findall(Body, clause(Goal, Body), Bodies), _, true), !,
+	optimize_control(Control, M, NewControl).
+inline_expansion(Goal, M, NewGoal, Clauses) :-
+	catch(bagof_or_nil(Body, substitution(Goal, M, Body), Bodies),
+	      _, fail), !,
 	(   clauses_to_control_structure(Bodies, Goal1)
-	->  inline_expansion(Goal1, NewGoal, Clauses)
+	->  inline_expansion(Goal1, M, NewGoal, Clauses)
 	;   NewGoal = Goal,
 	    Clauses = []
 	).
-inline_expansion(Goal, Goal, []).
+inline_expansion(Goal, _, Goal, []).
+
+:- meta_predicate
+	bagof_or_nil(?, 0, -).
+
+bagof_or_nil(Templ, Goal, List) :-
+	bagof(Templ, Goal, List), !.
+bagof_or_nil(_, _, []).
+
+%%	substitution(+Goal, +Module, -NewGoal) is nondet.
+%
+%	According to some clause, Goal can   be  substituted by NewGoal.
+%	Note that this is different from   clause/2 because we must take
+%	care of the head-unification.
+
+substitution(Goal, M, NewGoal) :-
+	copy_term(Goal, G2),
+	clause(M:G2, Body),
+	unifiable(Goal, G2, Unifier),
+	head_unification(Unifier, Body, NewGoal).
+
+head_unification([], Body, Body).
+head_unification([X=Y|HU], Body0, Body) :-
+	assertion(var(X)),
+	(   var(Y)
+	->  X = Y,
+	    Body1 = Body0
+	;   Body1 = (X=Y,Body0)
+	),
+	head_unification(HU, Body1, Body).
+
 
 clauses_to_control_structure(Bodies, Goal) :-
 	maplist(split_on_cut, Bodies, SplitBodies),
 	splitted_to_goal(SplitBodies, Goal).
+
+%%	optimize_control(+ControlIn, +Module, -ControlOut) is det.
+
+optimize_control(Var, _, Var) :-
+	var(Var), !.
+optimize_control((True,G0), M, G) :-	% (A,B)
+	always_true(True), !,
+	optimize_control(G0, M, G).
+optimize_control((G0,True), M, G) :-
+	always_true(True), !,
+	optimize_control(G0, M, G).
+optimize_control((A0,B0), M, (A,B)) :- !,
+	optimize_control(A0, M, A),
+	optimize_control(B0, M, B).
+optimize_control((True->T0;_), M, T) :-	% if->then;else
+	always_true(True), !,
+	optimize_control(T0, M, T).
+optimize_control((False->_;E0), M, E) :-
+	always_false(False), !,
+	optimize_control(E0, M, E).
+optimize_control((I0->T0;E0), M, (I->T;E)) :- !,
+	optimize_control(I0, M, I),
+	optimize_control(T0, M, T),
+	optimize_control(E0, M, E).
+optimize_control((False;B0), M, B) :-	% (A;B)
+	always_false(False), !,
+	optimize_control(B0, M, B).
+optimize_control((B0;False), M, B) :-
+	always_false(False), !,
+	optimize_control(B0, M, B).
+optimize_control((A0;B0), M, (A;B)) :- !,
+	optimize_control(A0, M, A),
+	optimize_control(B0, M, B).
+optimize_control(\+(G0), M, G) :- !,
+	optimize_control(G0, M, G).
+optimize_control(Control, _, Control).
+
+always_true(Var) :-
+	var(Var), !, fail.
+always_true(true).
+
+always_false(Var) :-
+	var(Var), !, fail.
+always_false(fail).
+always_false(false).
+
 
 %%	splitted_to_goal(+SplittedTerms, -Goal) is det.
 %
@@ -124,6 +204,7 @@ control(Var) :-
 	var(Var), !, fail.
 control((_,_)).
 control((_;_)).
+control(\+(_)).
 control((_->_)).
 control((_*->_)).
 
