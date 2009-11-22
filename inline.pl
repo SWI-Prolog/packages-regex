@@ -131,11 +131,23 @@ optimize_control((False;B0), B, State) :-	% (A;B)
 optimize_control((B0;False), B, State) :-
 	always_false(False), !,
 	optimize_control(B0, B, State).
-optimize_control((A0;B0), (A;B), State) :- !,
+optimize_control((A0;B0), Goal, State) :- !,
 	optimize_control(A0, A, State),
-	optimize_control(B0, B, State).
+	optimize_control(B0, B, State),
+	(   (A \== A0 ; B \== B0)
+	->  optimize_control((A;B), Goal, State)
+	;   Goal = (A;B)
+	).
 optimize_control(\+(G0), G, State) :- !,
 	optimize_control(G0, G, State).
+optimize_control(Goal, NewGoal, State) :-
+	unfold_max_depth(State, MaxDepth),
+	unfold_depth(State, D0),
+	D0 < MaxDepth,
+	D1 is D0+1,
+	set_depth_of_unfold(D1, State, State1),
+	expand(Goal, NewGoal, State1),
+	NewGoal \== Goal, !.
 optimize_control(Control, Control, _).
 
 always_true(Var) :-
