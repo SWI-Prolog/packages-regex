@@ -4,6 +4,7 @@
 :- use_module(library(lists)).
 :- use_module(library(apply)).
 :- use_module(library(record)).
+:- use_module(library(debug)).
 
 /** <module> Perform inline expansion of goals
 
@@ -22,7 +23,11 @@ used constructs into efficient code.
 @tbd	member/2, ! --> memberchk
 @tbd    A = ..., xyz(A)
 @tbd	Arithmetic expression optimization
-@tbd	Recursion
+@tbd	Recursion.  If we find a parent in the expansion;
+		- If we can sensible optimize other things: specialise
+		  the clause(s).
+		- Otherwise, we cannot optimize
+	I.e. we must specialise maplist/N!
 */
 
 :- record
@@ -263,6 +268,8 @@ control((_;_)).
 control(\+(_)).
 control((_->_)).
 control((_*->_)).
+control(catch(_,_,_)).			% these are not proper Prolog defs
+control(setup_call_catcher_cleanup(_,_,_,_)).
 
 
 		 /*******************************
