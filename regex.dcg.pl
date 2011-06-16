@@ -1,6 +1,30 @@
 /* DCG for XML Schema 1.0 regular expressions.
- * Parse the expression and return a structure.
+ * Parse a regular expression and return a structure.
+ */
+
+/* Copyright (c) 2008 World Wide Web Consortium,
+ * (Massachusetts Institute of Technology, European Research
+ * Consortium for Informatics and Mathematics, Keio University).
+ */
+
+/* This file is part of Xerophily, a parser for XSD regular expressions.
  *
+ * Xerophily is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser Public License as published
+ * by the Free Software Foundation, either version 3 of the License,
+ * or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser Public License
+ * along with this program.  If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+/*
  * Revisions:
  * 2008-05-23 : CMSMcQ : add options to ignore ad hoc / extragrammatical rules
  *			 in each grammar (to support checking statements like
@@ -71,8 +95,8 @@
  */
 
 :- module(regex_dcg,
-	  [ regExp//2			% +Options, -ParseTree
-	  ]).
+         [ regExp//2                   % +Options, -ParseTree
+         ]).
 
 /* Import grammar_option predicate from g_opts module, for checking option values.
  * The internals of the options need not concern us here.
@@ -818,7 +842,7 @@ singleCharNoEsc(Opts,CaretFlag,Atom) -->
 	}.
 
 /* N.B. The prose of proposal W does not mention \, so the correct
- * rule may be 	not(member(Atom, [ '[',']' ])) }.
+ * rule may be	not(member(Atom, [ '[',']' ])) }.
  * Not something to make a grammar option for, though.
  */
 
@@ -1022,7 +1046,7 @@ isCategory(_Opts,'Cn') --> ['C'],['n'].  /* not assigned  */
  * = [^\p{IsX}]).
  */
 /* [36] IsBlock ::= 'Is' [a-zA-Z0-9#x2D]+ */
-isBlock(Opts,RB) --> is_prefix, blockName(Opts,Blist),
+isBlock(Opts,RB) --> is-prefix, blockName(Opts,Blist),
   {
      atom_chars(B,Blist),
      grammar_option(Opts,blocks(BlockOption)),
@@ -1030,7 +1054,7 @@ isBlock(Opts,RB) --> is_prefix, blockName(Opts,Blist),
      block_recognition(B,opts(BlockOption,XGH),RB)
   }.
 
-is_prefix  --> ['I'],['s'].
+is-prefix  --> ['I'],['s'].
 blockName(Opts,[H|T])  --> blockNameChar(Opts,H), blockName(Opts,T).
 blockName(Opts,[H])  --> blockNameChar(Opts,H).
 blockNameChar(_Opts,Ch) --> [Ch],

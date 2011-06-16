@@ -4,17 +4,28 @@
 /* Copyright (c) 2008 World Wide Web Consortium, 
  * (Massachusetts Institute of Technology, European Research 
  * Consortium for Informatics and Mathematics, Keio University). 
- * All Rights Reserved. This work is distributed under the 
- * W3C(TM) Software License [1] in the hope that it will be 
- * useful, but WITHOUT ANY WARRANTY; without even the implied 
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * [1] http://www.w3.org/Consortium/Legal/2002/copyright-software-20021231
  */
 
+/* This file is part of Xerophily, a parser for XSD regular expressions.
+ *
+ * Xerophily is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser Public License as published
+ * by the Free Software Foundation, either version 3 of the License,
+ * or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser Public License
+ * along with this program.  If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
 
 /* Revisions:
  * 2008-03-26 : CMSMcQ : made file to handle option setting and reading.
+ *                       The idiom is based on O'Keefe, Craft of Prolog, p 20
  */
  :- module(g_opts,
 	   [ 
